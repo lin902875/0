@@ -1,0 +1,78 @@
+name: Build Valorant ESP USB Package
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v1
+      with:
+        cmake-version: '3.26.x'
+    
+    - name: Setup vcpkg
+      run: |
+        git clone https://github.com/Microsoft/vcpkg.git
+        cd vcpkg
+        .\bootstrap-vcpkg.bat
+      shell: cmd
+    
+    - name: Install OpenCV
+      run: |
+        cd vcpkg
+        .\vcpkg install opencv:x64-windows
+      shell: cmd
+    
+    - name: Create build directory
+      run: mkdir build
+      shell: cmd
+    
+    - name: Configure CMake
+      run: |
+        cd build
+        cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release ..
+      shell: cmd
+    
+    - name: Build project
+      run: |
+        cd build
+        cmake --build . --config Release
+      shell: cmd
+    
+    - name: Create USB package structure
+      run: |
+        mkdir usb_package\bin
+        mkdir usb_package\lib
+        mkdir usb_package\config
+        mkdir usb_package\logs
+      shell: cmd
+    
+    - name: Copy executable and DLLs
+      run: |
+        copy build\bin\Release\ValorantESP.exe usb_package\bin\
+        for /r vcpkg\installed\x64-windows\bin %%F in (opencv*.dll) do (
+          copy "%%F" usb_package\lib\
+        )
+      shell: cmd
+    
+    - name: Copy configuration files
+      run: |
+        copy launch.bat usb_package\
+        if exist config\settings.ini copy config\settings.ini usb_package\config\
+        if exist USB_GUIDE.md copy USB_GUIDE.md usb_package\
+        copy README.md usb_package\
+      shell: cmd
+    
+    - name: Upload USB package artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ValorantESP-USB-2560x1600
+        path: usb_package/
+        retention-days: 30
