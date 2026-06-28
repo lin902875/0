@@ -71,7 +71,7 @@ jobs:
       shell: cmd
     
     - name: Upload USB package artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ValorantESP-USB-2560x1600
         path: usb_package/
